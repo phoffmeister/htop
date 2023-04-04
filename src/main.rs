@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
-use clap::{arg, command};
+use clap::{arg, command, Command};
 use headless_chrome::types::PrintToPdfOptions;
-use headless_chrome::{Browser, LaunchOptionsBuilder};
+use headless_chrome::Browser;
 use log::info;
 use std::path::Path;
 use std::{env, fs};
@@ -39,7 +39,7 @@ const PAPER_A4: Paper = Paper(210.0 / MM_PER_INCH, 297.0 / MM_PER_INCH);
 /// Converts `HTML` input file into `PDF` output file.
 fn html_to_pdf(input_url: &str) -> Vec<u8> {
   info!("Opening browser");
-  let browser = Browser::new(LaunchOptionsBuilder::default().headless(true).build().unwrap()).unwrap();
+  let browser = Browser::default().unwrap();
   info!("Opening new tab");
   let tab = browser.new_tab().unwrap();
   info!("Opening an input file in new tab");
@@ -47,7 +47,7 @@ fn html_to_pdf(input_url: &str) -> Vec<u8> {
   info!("Waiting until the input file is opened");
   tab.wait_until_navigated().unwrap();
   // prepare PDF printing options
-  let options = PrintToPdfOptions {
+  let pdf_options = PrintToPdfOptions {
     landscape: Some(false),
     display_header_footer: Some(false),
     print_background: Some(true),
@@ -66,7 +66,7 @@ fn html_to_pdf(input_url: &str) -> Vec<u8> {
     transfer_mode: None,
   };
   info!("Starting printing");
-  let pdf_content = tab.print_to_pdf(Some(options)).unwrap();
+  let pdf_content = tab.print_to_pdf(Some(pdf_options)).unwrap();
   info!("Printing completed");
   pdf_content
 }
@@ -78,27 +78,43 @@ fn main() {
 
   let matches = command!()
     .name("htop")
-    .arg(arg!(<INPUT_FILE>).help("Input HTML file name").required(true).index(1))
-    .arg(arg!(<OUTPUT_FILE>).help("Output PDF file name").required(true).index(2))
+    .subcommand(
+      Command::new("single")
+        .about("Convert single HTML file to PDF")
+        .display_order(1)
+        .arg(arg!(<INPUT_FILE>).help("Input HTML file name").required(true).index(1))
+        .arg(arg!(<OUTPUT_FILE>).help("Output PDF file name").required(true).index(2)),
+    )
+    .subcommand(
+      Command::new("multiple")
+        .about("Convert multiple HTML files to PDF")
+        .display_order(2)
+        .arg(arg!(<INPUT_DIR>).help("Input directory").required(true).index(1)),
+    )
     .get_matches();
 
-  // prepare the input file URL
-  let Some(input_file) = matches.get_one::<String>("INPUT_FILE") else {
-    return;
-  };
-  let input_file_path = Path::new(input_file).canonicalize().unwrap();
-  let input_file_url = format!("file://{}", input_file_path.to_string_lossy());
+  match matches.subcommand() {
+    Some(("single", matches)) => {
+      // prepare the input file URL
+      let Some(input_file) = matches.get_one::<String>("INPUT_FILE") else {
+        return;
+      };
+      let input_file_path = Path::new(input_file).canonicalize().unwrap();
+      let input_file_url = format!("file://{}", input_file_path.to_string_lossy());
 
-  // prepare the output file name
-  let Some(output_file_name) = matches.get_one::<String>("OUTPUT_FILE") else {
-    return;
-  };
+      // prepare the output file name
+      let Some(output_file_name) = matches.get_one::<String>("OUTPUT_FILE") else {
+        return;
+      };
 
-  info!("Input file: {}", input_file_url);
-  info!("Output file: {}", output_file_name);
+      info!("Input file: {}", input_file_url);
+      info!("Output file: {}", output_file_name);
 
-  let pdf_content = html_to_pdf(&input_file_url);
-  info!("Writing output file");
-  fs::write(output_file_name, pdf_content).unwrap();
-  info!("Conversion completed");
+      let pdf_content = html_to_pdf(&input_file_url);
+      info!("Writing output file");
+      fs::write(output_file_name, pdf_content).unwrap();
+      info!("Conversion completed");
+    }
+    _ => {}
+  }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "htop"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["senees <code@senees.de>"]
 description = "HTML to PDF converter"
 documentation = "https://docs.rs/htop"
