@@ -1,6 +1,6 @@
 [package]
 name = "htop"
-version = "0.0.1"
+version = "0.0.3"
 authors = ["senees <code@senees.de>"]
 description = "HTML to PDF converter"
 documentation = "https://docs.rs/htop"
@@ -11,6 +11,6 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.1.6", features = ["cargo"] }
+env_logger = "0.10.0"
 headless_chrome = "1.0.5"
 log = "0.4.17"
-pretty_env_logger = "0.4.0"

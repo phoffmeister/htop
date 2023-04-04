@@ -24,7 +24,7 @@
 
 use clap::{arg, command};
 use headless_chrome::types::PrintToPdfOptions;
-use headless_chrome::Browser;
+use headless_chrome::{Browser, LaunchOptionsBuilder};
 use log::info;
 use std::path::Path;
 use std::{env, fs};
@@ -32,13 +32,19 @@ use std::{env, fs};
 /// Paper properties.
 struct Paper(f64, f64);
 
-const PAPER_A4: Paper = Paper(8.3, 11.7);
+const MM_PER_INCH: f64 = 25.4;
+
+const PAPER_A4: Paper = Paper(210.0 / MM_PER_INCH, 297.0 / MM_PER_INCH);
 
 /// Converts `HTML` input file into `PDF` output file.
 fn html_to_pdf(input_url: &str) -> Vec<u8> {
-  let browser = Browser::default().unwrap();
+  info!("Opening browser");
+  let browser = Browser::new(LaunchOptionsBuilder::default().headless(true).build().unwrap()).unwrap();
+  info!("Opening new tab");
   let tab = browser.new_tab().unwrap();
+  info!("Opening an input file in new tab");
   tab.navigate_to(input_url).unwrap();
+  info!("Waiting until the input file is opened");
   tab.wait_until_navigated().unwrap();
   // prepare PDF printing options
   let options = PrintToPdfOptions {
@@ -59,13 +65,16 @@ fn html_to_pdf(input_url: &str) -> Vec<u8> {
     prefer_css_page_size: None,
     transfer_mode: None,
   };
-  tab.print_to_pdf(Some(options)).unwrap()
+  info!("Starting printing");
+  let pdf_content = tab.print_to_pdf(Some(options)).unwrap();
+  info!("Printing completed");
+  pdf_content
 }
 
 /// Main entrypoint of the application.
 fn main() {
   env::set_var("RUST_LOG", "info");
-  pretty_env_logger::init();
+  env_logger::init();
 
   let matches = command!()
     .name("htop")
@@ -81,15 +90,15 @@ fn main() {
   let input_file_url = format!("file://{}", input_file_path.to_string_lossy());
 
   // prepare the output file name
-  let Some(output_file) = matches.get_one::<String>("OUTPUT_FILE") else {
+  let Some(output_file_name) = matches.get_one::<String>("OUTPUT_FILE") else {
     return;
   };
-  let output_file_path = Path::new(output_file).canonicalize().unwrap();
-  let output_file_name = output_file_path.to_string_lossy().to_string();
 
-  info!(" Input file: {}", input_file_url);
+  info!("Input file: {}", input_file_url);
   info!("Output file: {}", output_file_name);
 
   let pdf_content = html_to_pdf(&input_file_url);
+  info!("Writing output file");
   fs::write(output_file_name, pdf_content).unwrap();
+  info!("Conversion completed");
 }
