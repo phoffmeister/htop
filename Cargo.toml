@@ -1,0 +1,14 @@
+[package]
+name = "htop"
+version = "0.0.0"
+authors = ["senees <code@senees.de>"]
+description = "HTML to PDF converter based on headless_chrome crate."
+documentation = "https://docs.rs/htop"
+repository = "https://github.com/senees/htop.git"
+keywords = ["html", "pdf", "headless", "chrome", "converter"]
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+clap = "4.1.6"
+headless_chrome = "1.0.5"
