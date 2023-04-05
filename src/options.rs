@@ -26,6 +26,7 @@
 
 use headless_chrome::types::PrintToPdfOptions;
 
+/// PDF printing options.
 #[derive(Copy, Clone)]
 pub struct PdfPrintingOptions {
   /// Paper mode, `true` = landscape, `false` = portrait.
@@ -41,6 +42,7 @@ pub struct PdfPrintingOptions {
 }
 
 impl From<PdfPrintingOptions> for PrintToPdfOptions {
+  /// Converts [PdfPrintingOptions] into [PrintToPdfOptions].
   fn from(value: PdfPrintingOptions) -> Self {
     Self {
       landscape: Some(value.landscape),

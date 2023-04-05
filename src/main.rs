@@ -23,26 +23,25 @@
  */
 
 use crate::converter::{html_to_pdf, Files};
+use crate::errors::Result;
 use crate::options::PdfPrintingOptions;
+use crate::paper::{Paper, PaperSize};
+use crate::utils::{file_url, replace_ext};
 use clap::{arg, command, ArgAction, ArgMatches};
 use std::path::Path;
 use std::{env, fs};
 
 mod converter;
+mod errors;
 mod options;
+mod paper;
+mod utils;
 
 pub const HTOP_NAME: &str = env!("CARGO_PKG_NAME");
+
 const HTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 const HTOP_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
-
-/// Paper properties, currently just width and height in inches.
-struct Paper(f64, f64);
-
-/// Length of the inch expressed in millimeters.
-const MM_PER_INCH: f64 = 25.4;
-
-/// `A4` paper format.
-const PAPER_A4: Paper = Paper(210.0 / MM_PER_INCH, 297.0 / MM_PER_INCH);
 
 const SUBCOMMAND_SINGLE: &str = "single";
 
@@ -54,6 +53,8 @@ the longest paper edge is positioned in horizontal direction"#;
 const HELP_BACKGROUND: &str = r#"Prints also the backround of the page"#;
 
 const HELP_VERBOSE: &str = r#"Display printing process details"#;
+
+const HELP_PAPER: &str = r#"Paper format like A4, A3 and so on"#;
 
 const HELP_SINGLE: &str = r#"Convert single HTML file to PDF"#;
 
@@ -67,8 +68,6 @@ const HELP_IN_DIR: &str = r#"Input directory"#;
 
 const HELP_OUT_DIR: &str = r#"Output directory"#;
 
-const PDF_EXTENSION: &str = "pdf";
-
 /// Returns command-line arguments matches.
 #[rustfmt::skip]
 fn get_matches() -> ArgMatches {
@@ -76,7 +75,8 @@ fn get_matches() -> ArgMatches {
     .name(HTOP_NAME)
     .arg(arg!(-b --background).help(HELP_BACKGROUND).action(ArgAction::SetTrue).display_order(1))
     .arg(arg!(-l --landscape).help(HELP_LANDSCAPE).action(ArgAction::SetTrue).display_order(2))
-    .arg(arg!(-v --verbose).help(HELP_VERBOSE).action(ArgAction::SetTrue).display_order(2))
+    .arg(arg!(-v --verbose).help(HELP_VERBOSE).action(ArgAction::SetTrue).display_order(3))
+    .arg(arg!(-p --paper <FORMAT>).help(HELP_PAPER).display_order(4))
     .subcommand(command!().name(SUBCOMMAND_SINGLE).about(HELP_SINGLE).display_order(1)
       .arg(arg!(<INPUT_FILE>).help(HELP_IN_FILE).required(true).index(1))
       .arg(arg!([OUTPUT_FILE]).help(HELP_OUT_FILE).required(false).index(2)))
@@ -86,18 +86,8 @@ fn get_matches() -> ArgMatches {
     .get_matches()
 }
 
-fn file_url(file_path: &Path) -> String {
-  format!("file://{}", file_path.canonicalize().unwrap().to_string_lossy())
-}
-
-fn replace_ext(file_path: &Path) -> String {
-  let mut path = file_path.canonicalize().unwrap();
-  path.set_extension(PDF_EXTENSION);
-  path.to_string_lossy().to_string()
-}
-
 /// Main entrypoint of the application.
-fn main() {
+fn main() -> Result<()> {
   env::set_var("RUST_LOG", "info");
   env_logger::init();
 
@@ -106,14 +96,17 @@ fn main() {
   let landscape = matches.get_flag("landscape");
   let print_background = matches.get_flag("background");
   let verbose = matches.get_flag("verbose");
-  let paper_width = PAPER_A4.0;
-  let paper_height = PAPER_A4.1;
+  let paper = if let Some(paper_format) = matches.get_one::<String>("FORMAT") {
+    Paper::new(paper_format.try_into()?)
+  } else {
+    Paper::new(PaperSize::A4)
+  };
 
   let pdf_printing_options = PdfPrintingOptions {
     landscape,
     print_background,
-    paper_width,
-    paper_height,
+    paper_width: paper.width(),
+    paper_height: paper.height(),
     verbose,
   };
 
@@ -166,4 +159,5 @@ fn main() {
       println!("Try '{HTOP_NAME} --help' for more information.");
     }
   }
+  Ok(())
 }
