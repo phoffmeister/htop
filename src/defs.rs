@@ -27,6 +27,10 @@
 /// Type alias for a collection of file tuples.
 pub type Files = Vec<(String, String)>;
 
+pub const PDF_EXTENSION: &str = "pdf";
+
+pub const HTML_EXTENSION: &str = "html";
+
 pub const HTOP_NAME: &str = env!("CARGO_PKG_NAME");
 
 pub const HTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -45,6 +49,8 @@ the longest paper edge is positioned in horizontal direction"#;
 pub const HELP_PAPER: &str = r#"Paper format like A4 (default), A3, A2 and more"#;
 
 pub const HELP_VERBOSE: &str = r#"Display printing process details"#;
+
+pub const HELP_NO_CRASH_REPORTS: &str = r#"Disables crash reporter of headless chrome"#;
 
 pub const HELP_LOG_LEVEL: &str = r#"Logging level, allowed values are
 error, warn, info, debug, trace, off (default"#;

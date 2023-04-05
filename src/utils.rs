@@ -22,21 +22,51 @@
  * SOFTWARE.
  */
 
+//! # Utility functions
+
+use crate::defs::{HTML_EXTENSION, PDF_EXTENSION};
+use crate::errors::{err_canonicalize, err_file_name, Result};
 use std::env;
 use std::path::Path;
 
-const PDF_EXTENSION: &str = "pdf";
-
-pub fn file_url(file_path: &Path) -> String {
-  format!("file://{}", file_path.canonicalize().unwrap().to_string_lossy())
+/// Converts file path into file URL string.
+pub fn file_url(file_path: &Path) -> Result<String> {
+  Ok(format!(
+    "file://{}",
+    file_path
+      .canonicalize()
+      .map_err(|e| err_canonicalize(file_path, e.to_string()))?
+      .to_string_lossy()
+  ))
 }
 
-pub fn replace_ext(file_path: &Path) -> String {
-  let mut path = file_path.canonicalize().unwrap();
-  path.set_extension(PDF_EXTENSION);
-  path.to_string_lossy().to_string()
+/// Replaces the extension to `.pdf`.
+pub fn replace_ext(path: &Path) -> String {
+  path.with_extension(PDF_EXTENSION).to_string_lossy().to_string()
 }
 
+/// Replaces the extension to `.pdf` and returns the file name.
+pub fn file_name(path: &Path) -> Result<String> {
+  Ok(
+    path
+      .with_extension(PDF_EXTENSION)
+      .file_name()
+      .ok_or(err_file_name(path))?
+      .to_string_lossy()
+      .to_string(),
+  )
+}
+
+/// Returns `true` when specified path has `HTML` file extension.
+pub fn has_html_extension(path: &Path) -> bool {
+  if let Some(extension) = path.extension() {
+    extension == HTML_EXTENSION
+  } else {
+    false
+  }
+}
+
+/// Initializes the logger.
 pub fn init_logger(opt_log_level: Option<String>) {
   match env::var("RUST_LOG").unwrap_or("off".to_string()).as_str() {
     "error" | "warn" | "info" | "debug" | "trace" => {}

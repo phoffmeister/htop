@@ -25,6 +25,7 @@
 //! # Errors
 
 use std::fmt;
+use std::path::Path;
 
 /// Common result type.
 pub type Result<T, E = HtopError> = std::result::Result<T, E>;
@@ -55,6 +56,33 @@ impl HtopError {
 }
 
 /// Creates invalid paper format error.
-pub fn err_invalid_paper_format(s: &str) -> HtopError {
-  HtopError::new(format!("invalid paper format '{}'", s))
+pub fn err_invalid_paper_format(format_name: &str) -> HtopError {
+  HtopError::new(format!("invalid paper format '{}'", format_name))
+}
+
+/// Creates an error with failure reason message from headless chrome.
+pub fn err_headless_chrome(reason: String) -> HtopError {
+  HtopError::new(format!("headless chrome failed with reason: {}", reason))
+}
+
+/// Creates an error with file writing failure reason.
+pub fn err_write_file(file_name: &str, reason: String) -> HtopError {
+  HtopError::new(format!("writing file {} failed with reason: {}", file_name, reason))
+}
+
+/// Creates an error when canonicalizing a path fails.
+pub fn err_canonicalize(path: &Path, reason: String) -> HtopError {
+  HtopError::new(format!(
+    "canonicalizing failed for path {} with reason: {}",
+    path.to_string_lossy(),
+    reason
+  ))
+}
+
+/// Creates an error when retrieving file name fails.
+pub fn err_file_name(path: &Path) -> HtopError {
+  HtopError::new(format!(
+    "retrieving file name for path {} failed",
+    path.to_string_lossy()
+  ))
 }

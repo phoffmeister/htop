@@ -39,6 +39,8 @@ pub struct PdfPrintingOptions {
   pub paper_height: f64,
   /// Flag indicating if printing process should be more _talkative_.
   pub verbose: bool,
+  /// Flag indicating if crash reporter should be disabled.
+  pub no_crash_reports: bool,
 }
 
 impl From<PdfPrintingOptions> for PrintToPdfOptions {

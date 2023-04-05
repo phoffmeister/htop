@@ -46,9 +46,10 @@ fn get_matches() -> ArgMatches {
     .name(HTOP_NAME)
     .arg(arg!(-b --background).help(HELP_BACKGROUND).action(ArgAction::SetTrue).display_order(1))
     .arg(arg!(-l --landscape).help(HELP_LANDSCAPE).action(ArgAction::SetTrue).display_order(2))
+    .arg(arg!(--paper <FORMAT>).help(HELP_PAPER).action(ArgAction::Set).default_value("A4").default_missing_value("A4").display_order(3))
     .arg(arg!(-v --verbose).help(HELP_VERBOSE).action(ArgAction::SetTrue).display_order(4))
-    .arg(arg!(-p --paper <FORMAT>).help(HELP_PAPER).action(ArgAction::Set).default_value("A4").default_missing_value("A4").display_order(3))
-    .arg(arg!(-g --"log-level" <LEVEL>).help(HELP_LOG_LEVEL).action(ArgAction::Set).display_order(5))
+    .arg(arg!(--"log-level" <LEVEL>).help(HELP_LOG_LEVEL).action(ArgAction::Set).default_missing_value("off").display_order(5))
+    .arg(arg!(--"no-crash-reports").help(HELP_NO_CRASH_REPORTS).action(ArgAction::SetTrue).display_order(6))
     .subcommand(command!().name(SUBCOMMAND_SINGLE).about(HELP_SINGLE).display_order(1)
       .arg(arg!(<INPUT_FILE>).help(HELP_IN_FILE).required(true).index(1))
       .arg(arg!([OUTPUT_FILE]).help(HELP_OUT_FILE).required(false).index(2)))
@@ -72,12 +73,14 @@ fn main() -> Result<()> {
   let verbose = matches.get_flag("verbose");
   let paper_format = matches.get_one::<String>("paper").unwrap();
   let paper = Paper::new(paper_format.try_into()?);
+  let no_crash_reports = matches.get_flag("no-crash-reports");
   let pdf_printing_options = PdfPrintingOptions {
     landscape,
     print_background,
     paper_width: paper.width(),
     paper_height: paper.height(),
     verbose,
+    no_crash_reports,
   };
 
   // parse subcommands
@@ -86,7 +89,7 @@ fn main() -> Result<()> {
       // input file name is required
       let input_file = m.get_one::<String>("INPUT_FILE").unwrap();
       let input_file_path = Path::new(input_file);
-      let input_file_url = file_url(input_file_path);
+      let input_file_url = file_url(input_file_path)?;
       // output file name is optional
       let output_file_name = if let Some(output_file) = m.get_one::<String>("OUTPUT_FILE") {
         output_file.to_owned()
@@ -94,7 +97,7 @@ fn main() -> Result<()> {
         replace_ext(input_file_path)
       };
       // convert files
-      html_to_pdf(vec![(input_file_url, output_file_name)], pdf_printing_options);
+      html_to_pdf(vec![(input_file_url, output_file_name)], pdf_printing_options)?;
     }
     Some((SUBCOMMAND_MULTIPLE, m)) => {
       let mut files: Files = vec![];
@@ -104,25 +107,25 @@ fn main() -> Result<()> {
       if let Some(output_dir) = m.get_one::<String>("OUTPUT_DIR") {
         for path in fs::read_dir(input_dir).unwrap() {
           let entry = path.unwrap().path();
-          if entry.is_file() {
-            let input_file_url = file_url(&entry);
-            let output_file_path = Path::new(output_dir).join(entry.file_name().unwrap());
-            let output_file_name = replace_ext(output_file_path.as_path());
+          if entry.is_file() && has_html_extension(entry.as_path()) {
+            let input_file_url = file_url(&entry)?;
+            let output_file_path = Path::new(output_dir).join(file_name(entry.as_path())?);
+            let output_file_name = output_file_path.to_string_lossy().to_string();
             files.push((input_file_url, output_file_name));
           }
         }
       } else {
         for path in fs::read_dir(input_dir).unwrap() {
           let entry = path.unwrap().path();
-          if entry.is_file() {
-            let input_file_url = file_url(&entry);
+          if entry.is_file() && has_html_extension(entry.as_path()) {
+            let input_file_url = file_url(&entry)?;
             let output_file_name = replace_ext(entry.as_path());
             files.push((input_file_url, output_file_name));
           }
         }
       }
       // convert files
-      html_to_pdf(files, pdf_printing_options);
+      html_to_pdf(files, pdf_printing_options)?;
     }
     _ => {
       println!("{HTOP_NAME} {HTOP_VERSION}\n{HTOP_DESCRIPTION}\n");
