@@ -29,6 +29,9 @@ use log::info;
 use std::path::Path;
 use std::{env, fs};
 
+const HTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const HTOP_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+
 /// Paper properties, currently just width and height in inches.
 struct Paper(f64, f64);
 
@@ -165,6 +168,11 @@ fn main() {
       // convert files
       html_to_pdf(files);
     }
-    _ => {}
+    _ => {
+      println!("htop {HTOP_VERSION}");
+      println!("{HTOP_DESCRIPTION}\n");
+      println!("htop: missing subcommand");
+      println!("Try 'htop --help' for more information.\n");
+    }
   }
 }
