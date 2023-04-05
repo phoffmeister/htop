@@ -87,6 +87,8 @@ const HELP_IN_DIR: &str = r#"Input directory"#;
 
 const HELP_OUT_DIR: &str = r#"Output directory"#;
 
+const PDF_EXTENSION: &str = "pdf";
+
 /// Returns command-line arguments matches.
 #[rustfmt::skip]
 fn get_matches() -> ArgMatches {
@@ -96,11 +98,21 @@ fn get_matches() -> ArgMatches {
     .arg(arg!(-l --landscape).help(HELP_LANDSCAPE).action(ArgAction::SetTrue).display_order(2))
     .subcommand(command!().name("single").about(HELP_SINGLE).display_order(1)
       .arg(arg!(<INPUT_FILE>).help(HELP_IN_FILE).required(true).index(1))
-      .arg(arg!(<OUTPUT_FILE>).help(HELP_OUT_FILE).required(false).index(2)))
+      .arg(arg!([OUTPUT_FILE]).help(HELP_OUT_FILE).required(false).index(2)))
     .subcommand(command!().name("multiple").about(HELP_MULTIPLE).display_order(2)
       .arg(arg!(<INPUT_DIR>).help(HELP_IN_DIR).required(true).index(1))
-      .arg(arg!(<OUTPUT_DIR>).help(HELP_OUT_DIR).required(false).index(2)))
+      .arg(arg!([OUTPUT_DIR]).help(HELP_OUT_DIR).required(false).index(2)))
     .get_matches()
+}
+
+fn file_url(file_path: &Path) -> String {
+  format!("file://{}", file_path.canonicalize().unwrap().to_string_lossy())
+}
+
+fn replace_ext(file_path: &Path) -> String {
+  let mut path = file_path.to_path_buf();
+  path.set_extension(PDF_EXTENSION);
+  path.to_string_lossy().to_string()
 }
 
 /// Main entrypoint of the application.
@@ -114,20 +126,47 @@ fn main() {
     Some(("single", m)) => {
       // input file name is required
       let input_file = m.get_one::<String>("INPUT_FILE").unwrap();
-      let input_file_path = Path::new(input_file).canonicalize().unwrap();
+      let mut input_file_path = Path::new(input_file).canonicalize().unwrap();
       let input_file_url = format!("file://{}", input_file_path.to_string_lossy());
-
       // output file name is optional
       let output_file_name = if let Some(output_file) = m.get_one::<String>("OUTPUT_FILE") {
         Path::new(output_file).to_string_lossy().to_string()
       } else {
-        let mut output_file_path = input_file_path.clone();
-        output_file_path.set_extension("pdf");
-        output_file_path.to_string_lossy().to_string()
+        input_file_path.set_extension("pdf");
+        input_file_path.to_string_lossy().to_string()
       };
-      html_to_pdf(vec![(input_file_url, output_file_name)]);
+      // convert files
+      let files = vec![(input_file_url, output_file_name)];
+      html_to_pdf(files);
     }
-    Some(("multiple", _m)) => {}
+    Some(("multiple", m)) => {
+      let mut files = vec![];
+      // input directory name is required
+      let input_dir = m.get_one::<String>("INPUT_DIR").unwrap();
+      // output directory is optional
+      if let Some(output_dir) = m.get_one::<String>("OUTPUT_DIR") {
+        for path in fs::read_dir(input_dir).unwrap() {
+          let entry = path.unwrap().path();
+          if entry.is_file() {
+            let input_file_url = file_url(&entry);
+            let output_file_path = Path::new(output_dir).join(entry.file_name().unwrap());
+            let output_file_name = replace_ext(output_file_path.as_path());
+            files.push((input_file_url, output_file_name));
+          }
+        }
+      } else {
+        for path in fs::read_dir(input_dir).unwrap() {
+          let entry = path.unwrap().path();
+          if entry.is_file() {
+            let input_file_url = file_url(&entry);
+            let output_file_name = replace_ext(entry.as_path());
+            files.push((input_file_url, output_file_name));
+          }
+        }
+      }
+      // convert files
+      html_to_pdf(files);
+    }
     _ => {}
   }
 }
