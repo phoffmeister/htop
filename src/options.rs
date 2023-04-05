@@ -28,10 +28,16 @@ use headless_chrome::types::PrintToPdfOptions;
 
 #[derive(Copy, Clone)]
 pub struct PdfPrintingOptions {
+  /// Paper mode, `true` = landscape, `false` = portrait.
   pub landscape: bool,
+  /// Flag indicating it background should be printed, `true` = print background.
   pub print_background: bool,
+  /// Paper width in inches.
   pub paper_width: f64,
+  /// Paper height in inches.
   pub paper_height: f64,
+  /// Flag indicating if printing process should be more _talkative_.
+  pub verbose: bool,
 }
 
 impl From<PdfPrintingOptions> for PrintToPdfOptions {

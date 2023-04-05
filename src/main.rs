@@ -22,16 +22,16 @@
  * SOFTWARE.
  */
 
+use crate::converter::{html_to_pdf, Files};
 use crate::options::PdfPrintingOptions;
 use clap::{arg, command, ArgAction, ArgMatches};
-use headless_chrome::Browser;
-use log::info;
 use std::path::Path;
 use std::{env, fs};
 
+mod converter;
 mod options;
 
-const HTOP_NAME: &str = env!("CARGO_PKG_NAME");
+pub const HTOP_NAME: &str = env!("CARGO_PKG_NAME");
 const HTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const HTOP_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
@@ -44,20 +44,6 @@ const MM_PER_INCH: f64 = 25.4;
 /// `A4` paper format.
 const PAPER_A4: Paper = Paper(210.0 / MM_PER_INCH, 297.0 / MM_PER_INCH);
 
-/// Converts `HTML` input files into `PDF` output files.
-fn html_to_pdf(files: Vec<(String, String)>, pdf_printing_options: PdfPrintingOptions) {
-  let browser = Browser::default().unwrap();
-  let tab = browser.new_tab().unwrap();
-  for (input_url, output_file_name) in &files {
-    info!("Printing file: {}", input_url);
-    tab.navigate_to(input_url).unwrap();
-    tab.wait_until_navigated().unwrap();
-    let pdf = tab.print_to_pdf(Some(pdf_printing_options.into())).unwrap();
-    fs::write(output_file_name, pdf).unwrap();
-    info!("Printing completed: {}", output_file_name);
-  }
-}
-
 const SUBCOMMAND_SINGLE: &str = "single";
 
 const SUBCOMMAND_MULTIPLE: &str = "multiple";
@@ -66,6 +52,8 @@ const HELP_LANDSCAPE: &str = r#"Sets the paper orientation to landscape. In land
 the longest paper edge is positioned in horizontal direction"#;
 
 const HELP_BACKGROUND: &str = r#"Prints also the backround of the page"#;
+
+const HELP_VERBOSE: &str = r#"Display printing process details"#;
 
 const HELP_SINGLE: &str = r#"Convert single HTML file to PDF"#;
 
@@ -88,6 +76,7 @@ fn get_matches() -> ArgMatches {
     .name(HTOP_NAME)
     .arg(arg!(-b --background).help(HELP_BACKGROUND).action(ArgAction::SetTrue).display_order(1))
     .arg(arg!(-l --landscape).help(HELP_LANDSCAPE).action(ArgAction::SetTrue).display_order(2))
+    .arg(arg!(-v --verbose).help(HELP_VERBOSE).action(ArgAction::SetTrue).display_order(2))
     .subcommand(command!().name(SUBCOMMAND_SINGLE).about(HELP_SINGLE).display_order(1)
       .arg(arg!(<INPUT_FILE>).help(HELP_IN_FILE).required(true).index(1))
       .arg(arg!([OUTPUT_FILE]).help(HELP_OUT_FILE).required(false).index(2)))
@@ -116,6 +105,7 @@ fn main() {
 
   let landscape = matches.get_flag("landscape");
   let print_background = matches.get_flag("background");
+  let verbose = matches.get_flag("verbose");
   let paper_width = PAPER_A4.0;
   let paper_height = PAPER_A4.1;
 
@@ -124,6 +114,7 @@ fn main() {
     print_background,
     paper_width,
     paper_height,
+    verbose,
   };
 
   match matches.subcommand() {
@@ -142,7 +133,7 @@ fn main() {
       html_to_pdf(vec![(input_file_url, output_file_name)], pdf_printing_options);
     }
     Some((SUBCOMMAND_MULTIPLE, m)) => {
-      let mut files = vec![];
+      let mut files: Files = vec![];
       // input directory name is required
       let input_dir = m.get_one::<String>("INPUT_DIR").unwrap();
       // output directory is optional
