@@ -24,4 +24,14 @@
 HTML to PDF converter based on [headless_chrome](https://crates.io/crates/headless_chrome) crate
 and inspired by [html2pdf](https://crates.io/crates/html2pdf) crate.
 
-**WORK IN PROGRESS**
+# Installation
+
+```
+$ cargo install htop
+```
+
+# Usage
+
+```
+$ htop --help
+```
