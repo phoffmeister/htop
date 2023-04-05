@@ -110,7 +110,7 @@ fn file_url(file_path: &Path) -> String {
 }
 
 fn replace_ext(file_path: &Path) -> String {
-  let mut path = file_path.to_path_buf();
+  let mut path = file_path.canonicalize().unwrap().to_path_buf();
   path.set_extension(PDF_EXTENSION);
   path.to_string_lossy().to_string()
 }
@@ -126,18 +126,16 @@ fn main() {
     Some(("single", m)) => {
       // input file name is required
       let input_file = m.get_one::<String>("INPUT_FILE").unwrap();
-      let mut input_file_path = Path::new(input_file).canonicalize().unwrap();
-      let input_file_url = format!("file://{}", input_file_path.to_string_lossy());
+      let input_file_path = Path::new(input_file);
+      let input_file_url = file_url(input_file_path);
       // output file name is optional
       let output_file_name = if let Some(output_file) = m.get_one::<String>("OUTPUT_FILE") {
-        Path::new(output_file).to_string_lossy().to_string()
+        output_file.to_owned()
       } else {
-        input_file_path.set_extension("pdf");
-        input_file_path.to_string_lossy().to_string()
+        replace_ext(input_file_path)
       };
       // convert files
-      let files = vec![(input_file_url, output_file_name)];
-      html_to_pdf(files);
+      html_to_pdf(vec![(input_file_url, output_file_name)]);
     }
     Some(("multiple", m)) => {
       let mut files = vec![];
