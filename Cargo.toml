@@ -1,13 +1,13 @@
 [package]
 name = "htop"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["senees <code@senees.de>"]
 description = "HTML to PDF converter"
 documentation = "https://docs.rs/htop"
 repository = "https://github.com/senees/htop.git"
 keywords = ["html", "pdf", "headless", "chrome", "converter"]
 categories = ["command-line-utilities", "encoding"]
-license = "MIT"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 
 [dependencies]
