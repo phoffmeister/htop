@@ -22,13 +22,16 @@
  * SOFTWARE.
  */
 
+use crate::options::PdfPrintingOptions;
 use clap::{arg, command, ArgAction, ArgMatches};
-use headless_chrome::types::PrintToPdfOptions;
 use headless_chrome::Browser;
 use log::info;
 use std::path::Path;
 use std::{env, fs};
 
+mod options;
+
+const HTOP_NAME: &str = env!("CARGO_PKG_NAME");
 const HTOP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const HTOP_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
@@ -42,36 +45,22 @@ const MM_PER_INCH: f64 = 25.4;
 const PAPER_A4: Paper = Paper(210.0 / MM_PER_INCH, 297.0 / MM_PER_INCH);
 
 /// Converts `HTML` input files into `PDF` output files.
-fn html_to_pdf(files: Vec<(String, String)>) {
+fn html_to_pdf(files: Vec<(String, String)>, pdf_printing_options: PdfPrintingOptions) {
   let browser = Browser::default().unwrap();
   let tab = browser.new_tab().unwrap();
   for (input_url, output_file_name) in &files {
     info!("Printing file: {}", input_url);
     tab.navigate_to(input_url).unwrap();
     tab.wait_until_navigated().unwrap();
-    let pdf_options = Some(PrintToPdfOptions {
-      landscape: Some(false),
-      display_header_footer: Some(false),
-      print_background: Some(true),
-      scale: None,
-      paper_width: Some(PAPER_A4.0),
-      paper_height: Some(PAPER_A4.1),
-      margin_top: None,
-      margin_bottom: None,
-      margin_left: None,
-      margin_right: None,
-      page_ranges: None,
-      ignore_invalid_page_ranges: None,
-      header_template: None,
-      footer_template: None,
-      prefer_css_page_size: None,
-      transfer_mode: None,
-    });
-    let pdf = tab.print_to_pdf(pdf_options).unwrap();
+    let pdf = tab.print_to_pdf(Some(pdf_printing_options.into())).unwrap();
     fs::write(output_file_name, pdf).unwrap();
     info!("Printing completed: {}", output_file_name);
   }
 }
+
+const SUBCOMMAND_SINGLE: &str = "single";
+
+const SUBCOMMAND_MULTIPLE: &str = "multiple";
 
 const HELP_LANDSCAPE: &str = r#"Sets the paper orientation to landscape. In landscape mode,
 the longest paper edge is positioned in horizontal direction"#;
@@ -96,13 +85,13 @@ const PDF_EXTENSION: &str = "pdf";
 #[rustfmt::skip]
 fn get_matches() -> ArgMatches {
   command!()
-    .name("htop")
+    .name(HTOP_NAME)
     .arg(arg!(-b --background).help(HELP_BACKGROUND).action(ArgAction::SetTrue).display_order(1))
     .arg(arg!(-l --landscape).help(HELP_LANDSCAPE).action(ArgAction::SetTrue).display_order(2))
-    .subcommand(command!().name("single").about(HELP_SINGLE).display_order(1)
+    .subcommand(command!().name(SUBCOMMAND_SINGLE).about(HELP_SINGLE).display_order(1)
       .arg(arg!(<INPUT_FILE>).help(HELP_IN_FILE).required(true).index(1))
       .arg(arg!([OUTPUT_FILE]).help(HELP_OUT_FILE).required(false).index(2)))
-    .subcommand(command!().name("multiple").about(HELP_MULTIPLE).display_order(2)
+    .subcommand(command!().name(SUBCOMMAND_MULTIPLE).about(HELP_MULTIPLE).display_order(2)
       .arg(arg!(<INPUT_DIR>).help(HELP_IN_DIR).required(true).index(1))
       .arg(arg!([OUTPUT_DIR]).help(HELP_OUT_DIR).required(false).index(2)))
     .get_matches()
@@ -113,7 +102,7 @@ fn file_url(file_path: &Path) -> String {
 }
 
 fn replace_ext(file_path: &Path) -> String {
-  let mut path = file_path.canonicalize().unwrap().to_path_buf();
+  let mut path = file_path.canonicalize().unwrap();
   path.set_extension(PDF_EXTENSION);
   path.to_string_lossy().to_string()
 }
@@ -125,8 +114,20 @@ fn main() {
 
   let matches = get_matches();
 
+  let landscape = matches.get_flag("landscape");
+  let print_background = matches.get_flag("background");
+  let paper_width = PAPER_A4.0;
+  let paper_height = PAPER_A4.1;
+
+  let pdf_printing_options = PdfPrintingOptions {
+    landscape,
+    print_background,
+    paper_width,
+    paper_height,
+  };
+
   match matches.subcommand() {
-    Some(("single", m)) => {
+    Some((SUBCOMMAND_SINGLE, m)) => {
       // input file name is required
       let input_file = m.get_one::<String>("INPUT_FILE").unwrap();
       let input_file_path = Path::new(input_file);
@@ -138,9 +139,9 @@ fn main() {
         replace_ext(input_file_path)
       };
       // convert files
-      html_to_pdf(vec![(input_file_url, output_file_name)]);
+      html_to_pdf(vec![(input_file_url, output_file_name)], pdf_printing_options);
     }
-    Some(("multiple", m)) => {
+    Some((SUBCOMMAND_MULTIPLE, m)) => {
       let mut files = vec![];
       // input directory name is required
       let input_dir = m.get_one::<String>("INPUT_DIR").unwrap();
@@ -166,13 +167,12 @@ fn main() {
         }
       }
       // convert files
-      html_to_pdf(files);
+      html_to_pdf(files, pdf_printing_options);
     }
     _ => {
-      println!("htop {HTOP_VERSION}");
-      println!("{HTOP_DESCRIPTION}\n");
-      println!("htop: missing subcommand");
-      println!("Try 'htop --help' for more information.\n");
+      println!("{HTOP_NAME} {HTOP_VERSION}\n{HTOP_DESCRIPTION}\n");
+      println!("{HTOP_NAME}: missing subcommand");
+      println!("Try '{HTOP_NAME} --help' for more information.");
     }
   }
 }
