@@ -6,6 +6,7 @@ description = "HTML to PDF converter"
 documentation = "https://docs.rs/htop"
 repository = "https://github.com/senees/htop.git"
 keywords = ["html", "pdf", "headless", "chrome", "converter"]
+categories = ["command-line-utilities"]
 license = "MIT"
 edition = "2021"
 
