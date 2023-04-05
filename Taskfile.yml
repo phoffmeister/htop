@@ -38,3 +38,18 @@ tasks:
     desc: Runs code formatter
     cmds:
       - cmd: cargo fmt
+
+  help:
+    desc: Runs htop help option
+    cmds:
+      - cmd: cargo run -- help
+
+  help-single:
+    desc: Runs htop help option for `single` command
+    cmds:
+      - cmd: cargo run -- help single
+
+  help-multiple:
+    desc: Runs htop help option for `multiple` command
+    cmds:
+      - cmd: cargo run -- help multiple

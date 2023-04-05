@@ -82,7 +82,7 @@ fn main() {
       Command::new("single")
         .about("Convert single HTML file to PDF")
         .display_order(1)
-        .arg(arg!(<INPUT_FILE>).help("Input HTML file name").required(true).index(1))
+        .arg(arg!(<INPUT_FILE>).help("Input HTML file name.").required(true).index(1))
         .arg(arg!(<OUTPUT_FILE>).help("Output PDF file name").required(true).index(2)),
     )
     .subcommand(
