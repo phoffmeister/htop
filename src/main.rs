@@ -38,39 +38,36 @@ const MM_PER_INCH: f64 = 25.4;
 /// `A4` paper format.
 const PAPER_A4: Paper = Paper(210.0 / MM_PER_INCH, 297.0 / MM_PER_INCH);
 
-/// Converts `HTML` input file into `PDF` output file.
-fn html_to_pdf(input_url: &str) -> Vec<u8> {
-  info!("Opening browser");
+/// Converts `HTML` input files into `PDF` output files.
+fn html_to_pdf(files: Vec<(String, String)>) {
   let browser = Browser::default().unwrap();
-  info!("Opening new tab");
   let tab = browser.new_tab().unwrap();
-  info!("Opening an input file in new tab");
-  tab.navigate_to(input_url).unwrap();
-  info!("Waiting until the input file is opened");
-  tab.wait_until_navigated().unwrap();
-  // prepare PDF printing options
-  let pdf_options = PrintToPdfOptions {
-    landscape: Some(false),
-    display_header_footer: Some(false),
-    print_background: Some(true),
-    scale: None,
-    paper_width: Some(PAPER_A4.0),
-    paper_height: Some(PAPER_A4.1),
-    margin_top: None,
-    margin_bottom: None,
-    margin_left: None,
-    margin_right: None,
-    page_ranges: None,
-    ignore_invalid_page_ranges: None,
-    header_template: None,
-    footer_template: None,
-    prefer_css_page_size: None,
-    transfer_mode: None,
-  };
-  info!("Starting printing");
-  let pdf_content = tab.print_to_pdf(Some(pdf_options)).unwrap();
-  info!("Printing completed");
-  pdf_content
+  for (input_url, output_file_name) in &files {
+    info!("Printing file: {}", input_url);
+    tab.navigate_to(input_url).unwrap();
+    tab.wait_until_navigated().unwrap();
+    let pdf_options = Some(PrintToPdfOptions {
+      landscape: Some(false),
+      display_header_footer: Some(false),
+      print_background: Some(true),
+      scale: None,
+      paper_width: Some(PAPER_A4.0),
+      paper_height: Some(PAPER_A4.1),
+      margin_top: None,
+      margin_bottom: None,
+      margin_left: None,
+      margin_right: None,
+      page_ranges: None,
+      ignore_invalid_page_ranges: None,
+      header_template: None,
+      footer_template: None,
+      prefer_css_page_size: None,
+      transfer_mode: None,
+    });
+    let pdf = tab.print_to_pdf(pdf_options).unwrap();
+    fs::write(output_file_name, pdf).unwrap();
+    info!("Printing completed: {}", output_file_name);
+  }
 }
 
 const HELP_LANDSCAPE: &str = r#"Sets the paper orientation to landscape. In landscape mode,
@@ -121,22 +118,14 @@ fn main() {
       let input_file_url = format!("file://{}", input_file_path.to_string_lossy());
 
       // output file name is optional
-      let output_file_path = if let Some(output_file_name) = m.get_one::<String>("OUTPUT_FILE") {
-        Path::new(output_file_name).to_owned()
+      let output_file_name = if let Some(output_file) = m.get_one::<String>("OUTPUT_FILE") {
+        Path::new(output_file).to_string_lossy().to_string()
       } else {
-        let mut path = input_file_path.clone();
-        path.set_extension("pdf");
-        path
+        let mut output_file_path = input_file_path.clone();
+        output_file_path.set_extension("pdf");
+        output_file_path.to_string_lossy().to_string()
       };
-
-      info!("Input file: {}", input_file_path.to_string_lossy());
-      info!("Input file URL: {}", input_file_url);
-      info!("Output file: {}", output_file_path.to_string_lossy());
-
-      let pdf_content = html_to_pdf(&input_file_url);
-      info!("Writing output file");
-      fs::write(output_file_path, pdf_content).unwrap();
-      info!("Conversion completed");
+      html_to_pdf(vec![(input_file_url, output_file_name)]);
     }
     Some(("multiple", _m)) => {}
     _ => {}
