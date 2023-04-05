@@ -24,13 +24,10 @@
 
 //! # HTML to PDF converter
 
+use crate::defs::{Files, HTOP_NAME};
 use crate::options::PdfPrintingOptions;
-use crate::HTOP_NAME;
 use headless_chrome::Browser;
 use std::fs;
-
-/// Type alias for a collection of file tuples.
-pub type Files = Vec<(String, String)>;
 
 /// Converts `HTML` input files into `PDF` output files.
 pub fn html_to_pdf(files: Files, pdf_printing_options: PdfPrintingOptions) {

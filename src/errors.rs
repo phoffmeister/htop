@@ -24,27 +24,37 @@
 
 //! # Errors
 
+use std::fmt;
+
 /// Common result type.
 pub type Result<T, E = HtopError> = std::result::Result<T, E>;
 
 /// Common error definition.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct HtopError(String);
 
-impl std::fmt::Display for HtopError {
-  /// Implementation of [Display](std::fmt::Display) trait for [HtopError].
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for HtopError {
+  /// Implements [Display](fmt::Display) trait for [HtopError].
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.0)
+  }
+}
+
+impl fmt::Debug for HtopError {
+  /// Implements [Debug](fmt::Debug) trait for [HtopError].
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}", self.0)
   }
 }
 
 impl HtopError {
-  /// Creates a new [HtopError] with specified `message`.
+  /// Creates a new [HtopError] with specified message.
   pub fn new(message: String) -> Self {
     Self(message)
   }
 }
 
+/// Creates invalid paper format error.
 pub fn err_invalid_paper_format(s: &str) -> HtopError {
-  HtopError::new(format!("invalid paper format: {}", s))
+  HtopError::new(format!("invalid paper format '{}'", s))
 }

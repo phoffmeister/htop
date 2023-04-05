@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+use std::env;
 use std::path::Path;
 
 const PDF_EXTENSION: &str = "pdf";
@@ -34,4 +35,15 @@ pub fn replace_ext(file_path: &Path) -> String {
   let mut path = file_path.canonicalize().unwrap();
   path.set_extension(PDF_EXTENSION);
   path.to_string_lossy().to_string()
+}
+
+pub fn init_logger(opt_log_level: Option<String>) {
+  match env::var("RUST_LOG").unwrap_or("off".to_string()).as_str() {
+    "error" | "warn" | "info" | "debug" | "trace" => {}
+    _ => env::set_var("RUST_LOG", "off"),
+  }
+  if let Some(log_level) = opt_log_level {
+    env::set_var("RUST_LOG", log_level);
+  }
+  env_logger::init();
 }
