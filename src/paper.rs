@@ -46,6 +46,11 @@ pub enum PaperSize {
   A4,
   A5,
   A6,
+  Letter,
+  Legal,
+  Tabloid,
+  Ledger,
+  JuniorLegal,
 }
 
 impl TryFrom<&String> for PaperSize {
@@ -60,6 +65,11 @@ impl TryFrom<&String> for PaperSize {
       "A4" => Ok(Self::A4),
       "A5" => Ok(Self::A5),
       "A6" => Ok(Self::A6),
+      "Letter" => Ok(Self::Letter),
+      "Legal" => Ok(Self::Legal),
+      "Tabloid" => Ok(Self::Tabloid),
+      "Ledger" => Ok(Self::Ledger),
+      "JuniorLegal" => Ok(Self::JuniorLegal),
       other => Err(err_invalid_paper_format(other)),
     }
   }
@@ -85,6 +95,11 @@ impl Paper {
       PaperSize::A4 => (210.0, 297.0),
       PaperSize::A5 => (148.0, 210.0),
       PaperSize::A6 => (105.0, 148.0),
+      PaperSize::Letter => (216.0, 279.0),
+      PaperSize::Legal => (216.0, 356.0),
+      PaperSize::Tabloid => (279.0, 432.0),
+      PaperSize::Ledger => (432.0, 279.0),
+      PaperSize::JuniorLegal => (127.0, 203.0),
     };
     // create paper with sizes in inches
     Self {
